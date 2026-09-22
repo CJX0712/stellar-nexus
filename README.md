@@ -80,25 +80,51 @@ stellarnx verify
 通过 15/15
 ```
 
+### 默认就是离线（零依赖、断网即用）
+
+不装 Ollama、不联网，也能跑完整链路：`stellarnx verify` 15/15 全绿、
+`pytest` 94 passed、`scripts/live_check.py` 也能走真 HTTP 验收。这一套用的是
+内置回退——**Hash 嵌入 + 内存索引 + Mock LLM + 词法重排**——专门保证
+「干净环境一键复现」：任意机器、任意网络下先把系统跑起来再说。
+
+> 也就是说，**默认 `stellarnx serve` 起的是离线回退，不是真模型**。别依赖
+> 默认值去指望真答案，要真模型就显式切后端（见下）。
+
 ### 接入真实模型（可选，质量更高）
+
+想让答案由真模型生成、知识由真向量召回，先准备好本地 Ollama 服务与两个模型，
+再**显式**把后端切到 ollama（`SNX_EMBED_BACKEND` 等默认是 `hash/mock/identity`，
+不显式设就会一直走离线回退）：
 
 ```bash
 ollama pull qwen2.5:1.5b-instruct     # 生成
 ollama pull bge-m3                    # 嵌入，1024 维
-ollama serve
+ollama serve                          # 默认 http://127.0.0.1:11434
 
 export SNX_EMBED_BACKEND=ollama
 export SNX_LLM_BACKEND=ollama
 export SNX_RERANK_BACKEND=llm
+# Windows PowerShell:
+#   $env:SNX_EMBED_BACKEND="ollama"; $env:SNX_LLM_BACKEND="ollama"; $env:SNX_RERANK_BACKEND="llm"
 ```
-
-> Windows PowerShell 写法：`$env:SNX_EMBED_BACKEND="ollama"`
 
 ### 启动服务与控制台
 
 ```bash
 stellarnx serve            # 默认 http://127.0.0.1:8000
 ```
+
+真实验收（对运行中的服务走真 HTTP，要求上面三个 ollama 开关已生效）：
+
+```bash
+python scripts/live_check.py --base http://127.0.0.1:8000
+```
+
+实测结论（当前 HEAD，真模型链路）：**23/23 通过**
+
+- 后端：`ollama:bge-m3` + `ollama:qwen2.5:1.5b-instruct` + `faiss`（1024 维）+ `llm-listwise` 重排
+- RAG 链路：`chunks == vectors == 16`、引用 3 条、`groundedness=1.0`、Span 树含 `route → retrieve → rerank → generate → verify`
+- 评测门禁：`recall@1 0.88 / recall@3 1.0 / recall@5 1.0 / MRR@10 0.9333 / nDCG@5 0.9505 / 忠实度 1.0 / P95 ≈ 32ms`，全部超过阈值
 
 浏览器打开 <http://127.0.0.1:8000> 即是控制台：
 
