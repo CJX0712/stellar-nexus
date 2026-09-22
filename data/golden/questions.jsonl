@@ -1,0 +1,25 @@
+{"query": "星枢系统默认采用什么向量索引？", "gold_doc": "vecdb", "gold_text": "IndexFlatIP 索引", "must_include": ["FAISS"], "route_expect": "rag"}
+{"query": "FAISS 支持哪些索引结构？", "gold_doc": "vecdb", "gold_text": "IndexFlatIP 与 IVF、HNSW", "must_include": ["IVF"], "route_expect": "rag"}
+{"query": "向量维度通常选择多少？", "gold_doc": "vecdb", "gold_text": "768 或 1024", "must_include": ["1024"], "route_expect": "rag"}
+{"query": "FAISS 不可用时系统会怎么处理？", "gold_doc": "vecdb", "gold_text": "回退到 numpy 暴力检索", "must_include": ["numpy"], "route_expect": "rag"}
+{"query": "检索增强生成的标准流程包含哪几个环节？", "gold_doc": "rag", "gold_text": "切分、向量化、入库、召回、重排、生成、校验", "must_include": ["校验"], "route_expect": "rag"}
+{"query": "为什么生成环节必须强制标注引用编号？", "gold_doc": "rag", "gold_text": "否则后续无法做归因校验", "must_include": ["归因"], "route_expect": "rag"}
+{"query": "重排模型为什么比双塔嵌入精度更高？", "gold_doc": "rerank", "gold_text": "能捕捉查询与文档之间的细粒度交互", "must_include": ["交叉编码器"], "route_expect": "rag"}
+{"query": "重排模型文件缺失时系统会降级到什么方案？", "gold_doc": "rerank", "gold_text": "降级到词汇覆盖重排", "must_include": ["IDF"], "route_expect": "rag"}
+{"query": "为什么混合检索要用 RRF 而不是直接加权求和？", "gold_doc": "hybrid", "gold_text": "直接加权求和会让某一路压死另一路", "must_include": ["RRF"], "route_expect": "rag"}
+{"query": "BM25 负责什么任务？", "gold_doc": "hybrid", "gold_text": "负责字面匹配", "must_include": ["BM25"], "route_expect": "rag"}
+{"query": "可证性分数是怎么计算的？", "gold_doc": "ground", "gold_text": "被支持的断言数除以断言总数", "must_include": ["断言"], "route_expect": "rag"}
+{"query": "为什么空答案的可证性分数必须是零？", "gold_doc": "ground", "gold_text": "否则空输出会被误判为满分", "must_include": ["零"], "route_expect": "rag"}
+{"query": "数字一致性检查为什么关键？", "gold_doc": "ground", "gold_text": "编造内容往往体现在数字上", "must_include": ["数字"], "route_expect": "rag"}
+{"query": "智能体的规划器、执行器与批判器各自负责什么？", "gold_doc": "agent", "gold_text": "规划器只产出步骤列表", "must_include": ["批判器"], "route_expect": "rag"}
+{"query": "计算器工具如何防止逃逸到系统命令？", "gold_doc": "agent", "gold_text": "只允许数字与四则运算", "must_include": ["语法树"], "route_expect": "rag"}
+{"query": "哈希嵌入为什么不能用 Python 内置 hash？", "gold_doc": "embed", "gold_text": "因为后者按进程加盐", "must_include": ["哈希"], "route_expect": "rag"}
+{"query": "bge-m3 输出多少维向量？", "gold_doc": "embed", "gold_text": "1024 维向量", "must_include": ["bge-m3"], "route_expect": "rag"}
+{"query": "判断系统可复现的标准是什么？", "gold_doc": "ops", "gold_text": "干净环境中一条命令能否把系统跑起来", "must_include": ["干净环境"], "route_expect": "rag"}
+{"query": "模型文件为什么必须写入 gitignore？", "gold_doc": "ops", "gold_text": "模型文件体积大", "must_include": ["gitignore"], "route_expect": "rag"}
+{"query": "比较 BM25 和稠密向量两路召回的区别", "gold_doc": "hybrid", "gold_text": "负责字面匹配", "must_include": ["稠密"], "route_expect": "multihop"}
+{"query": "索引库装不上时系统还能用吗？", "gold_doc": "vecdb", "gold_text": "回退到 numpy 暴力检索", "must_include": ["回退"], "route_expect": "rag", "hard": true}
+{"query": "切分的粒度应该怎么拿捏？", "gold_doc": "rag", "gold_text": "片段过大会引入噪声", "must_include": ["片段"], "route_expect": "rag", "hard": true}
+{"query": "精排模型跑不起来会怎么样？", "gold_doc": "rerank", "gold_text": "降级到词汇覆盖重排", "must_include": ["降级"], "route_expect": "rag", "hard": true}
+{"query": "两路结果怎么并成一个顺序？", "gold_doc": "hybrid", "gold_text": "倒数排名融合", "must_include": ["融合"], "route_expect": "rag", "hard": true}
+{"query": "答案里凭空出现的数字怎么被发现？", "gold_doc": "ground", "gold_text": "数字一致性检查", "must_include": ["数字"], "route_expect": "rag", "hard": true}

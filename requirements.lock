@@ -1,0 +1,61 @@
+# 星枢 StellarNexus 依赖锁版清单
+#
+# 生成环境: Windows 11 / Python 3.13.12 / uv
+# 生成命令: uv pip freeze --python .venv/Scripts/python.exe
+#
+# 用法（完整复现，含开发工具）:
+#     python -m venv .venv && source .venv/bin/activate
+#     pip install -r requirements.lock
+#     pip install -e . --no-deps
+#
+# 只装运行时依赖（生产）:
+#     pip install -e .
+#
+# 说明:
+# - 全部依赖在 win_amd64 与 manylinux 上都有预编译轮子，无需编译器。
+#     可用 `python scripts/check_wheels.py --platform linux --python cp313` 复核。
+# - colorama 仅在 Windows 控制台着色时需要，Linux 上装了也无害。
+# - 本文件刻意不含 `-e .`：那会写入本机绝对路径，破坏他人复现。
+annotated-doc==0.0.5
+annotated-types==0.8.0
+anyio==4.15.1
+certifi==2026.7.22
+click==8.5.0
+colorama==0.4.6
+coverage==7.16.1
+faiss-cpu==1.15.1
+fastapi==0.141.1
+filelock==4.0.1
+flatbuffers==25.12.19
+fsspec==2026.9.0
+h11==0.16.0
+hf-xet==1.6.0
+httpcore==1.0.9
+httpx==0.28.1
+huggingface-hub==1.32.0
+idna==3.20
+iniconfig==2.3.0
+markdown-it-py==4.2.0
+mdurl==0.1.2
+numpy==2.5.3
+onnxruntime==1.30.0
+orjson==3.12.0
+packaging==26.3
+pluggy==1.6.0
+protobuf==7.36.2
+pydantic==2.13.5
+pydantic-core==2.46.5
+pygments==2.21.0
+pytest==9.1.1
+pytest-cov==7.0.0
+python-multipart==0.0.32
+pyyaml==6.0.3
+rich==15.0.0
+ruff==0.16.8
+sse-starlette==3.4.11
+starlette==1.6.0
+tokenizers==0.23.2
+tqdm==4.70.1
+typing-extensions==4.16.0
+typing-inspection==0.4.4
+uvicorn==0.53.0

@@ -1,0 +1,82 @@
+[project]
+name = "stellar-nexus"
+version = "1.0.0"
+description = "星枢 StellarNexus - 可自证的模块化复合智能系统（检索增强 + 归因校验 + 智能体编排）"
+authors = [{ name = "晨星" }]
+maintainers = [{ name = "晨星" }]
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "Apache-2.0" }
+keywords = ["ai", "rag", "agent", "retrieval", "rerank", "groundedness", "llm"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "numpy==2.5.3",
+    "faiss-cpu==1.15.1",
+    "onnxruntime==1.30.0",
+    "tokenizers==0.23.2",
+    "fastapi==0.141.1",
+    "uvicorn==0.53.0",
+    "pydantic==2.13.5",
+    "httpx==0.28.1",
+    "orjson==3.12.0",
+    "sse-starlette==3.4.11",
+    "python-multipart==0.0.32",
+    "rich==15.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==9.1.1",
+    "pytest-cov==7.0.0",
+    "ruff==0.16.8",
+]
+
+[project.scripts]
+stellarnx = "stellarnx.cli:main"
+
+[build-system]
+requires = ["setuptools>=70"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# 不在 addopts 里加 -q：和命令行传的 -q 叠加成 -qq 会把最后的统计行也吞掉，
+# 于是「全绿」和「一个测试都没跑」在输出上长得一样。
+addopts = "--strict-markers"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [".venv", "node_modules", "models", "data"]
+
+[tool.ruff.lint]
+# 只挑「真能抓出问题」的规则集，不追求规则数量。
+#   E/F  语法与未使用（PyFlakes 基本盘）
+#   I    导入顺序，配合 scripts/check_imports.py
+#   UP   使用现代语法（我们声明 >=3.11）
+#   B    常见逻辑陷阱
+#   RUF  Ruff 自有规则（含无用 noqa、__all__ 未排序）
+select = ["E", "F", "I", "UP", "B", "RUF"]
+ignore = [
+    # 中文注释按语义换行，不为了 100 列硬折；真正的长表达式由人工控制。
+    "E501",
+    # 本项目以中文为第一语言，全角标点是正确写法而不是「歧义字符」。
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    # RoutePath 刻意写成 str + Enum 而不是 StrEnum：前者在 json.dumps 里直接
+    # 序列化为字符串值，且 pydantic / FastAPI 对它的处理更直观。
+    "UP042",
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["stellarnx"]

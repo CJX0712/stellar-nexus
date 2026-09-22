@@ -1,0 +1,15 @@
+{
+  "name": "stellar-nexus-web-console",
+  "version": "1.0.0",
+  "private": true,
+  "description": "星枢 StellarNexus 控制台的前端测试依赖壳。控制台本体是 web/index.html 单文件，没有构建步骤，这里的依赖只用于无头冒烟测试。",
+  "author": "晨星",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test:web": "node scripts/web_smoke.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  }
+}

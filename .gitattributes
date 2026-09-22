@@ -1,0 +1,25 @@
+# 统一换行符：仓库内一律 LF，避免 Windows 检出 CRLF 后
+# 在 Linux CI 上跑测试出现「本地全绿、CI 全红」的差异。
+# 作者: 晨星
+* text=auto eol=lf
+
+*.py        text eol=lf
+*.md        text eol=lf
+*.toml      text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.json      text eol=lf
+*.jsonl     text eol=lf
+*.html      text eol=lf
+*.mjs       text eol=lf
+*.lock      text eol=lf
+Makefile    text eol=lf
+
+# 图片等二进制文件不做换行转换
+*.png       binary
+*.jpg       binary
+*.onnx      binary
+*.bin       binary
+
+# 动态生成的统计文件，不参与 diff
+data/e2e-report.txt linguist-generated

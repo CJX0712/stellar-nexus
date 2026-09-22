@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>星枢 StellarNexus · 控制台</title>
+<meta name="author" content="晨星">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%232b6cb0' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%232b6cb0'/%3E%3C/svg%3E">
+<style>
+/* ============================================================
+   星枢 StellarNexus 控制台 — 单文件、零外部依赖、内联全部样式
+   作者: 晨星
+   ============================================================ */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --surface-2:#f0f2f6; --border:#e1e5ec;
+  --text:#15181e; --muted:#5f6875; --faint:#8b93a1;
+  --accent:#2b6cb0; --accent-weak:#e8f0fa;
+  --ok:#127a4d; --ok-weak:#e4f5ed;
+  --warn:#a8640a; --warn-weak:#fdf0dd;
+  --err:#c0392b; --err-weak:#fbe9e7;
+  --route-direct:#5f6875; --route-rag:#2b6cb0; --route-multihop:#7c4bb0; --route-agent:#0e7c86;
+  --shadow:0 1px 2px rgba(16,24,40,.05), 0 8px 24px -12px rgba(16,24,40,.18);
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+}
+html[data-theme="dark"]{
+  --bg:#0e1116; --surface:#151a21; --surface-2:#1b212a; --border:#262d38;
+  --text:#e7eaf0; --muted:#98a1af; --faint:#6d7684;
+  --accent:#7aaee8; --accent-weak:#1a2634;
+  --ok:#4cc38a; --ok-weak:#12271f;
+  --warn:#e0a33c; --warn-weak:#2b2113;
+  --err:#ef7063; --err-weak:#2e1a18;
+  --route-direct:#98a1af; --route-rag:#7aaee8; --route-multihop:#b48ce0; --route-agent:#4fc4cd;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 28px -14px rgba(0,0,0,.7);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--text); font-family:var(--sans);
+  font-size:14px; line-height:1.6; -webkit-font-smoothing:antialiased;
+}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+button{font-family:inherit;font-size:inherit;cursor:pointer}
+input,textarea,select{font-family:inherit;font-size:inherit;color:inherit}
+.wrap{max-width:1280px;margin:0 auto;padding:0 20px}
+
+/* ---------- 头部 ---------- */
+header{
+  position:sticky;top:0;z-index:40;background:var(--surface);
+  border-bottom:1px solid var(--border);
+}
+.hd{display:flex;align-items:center;gap:18px;padding:12px 0;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.brand svg{flex:none}
+.brand .t1{font-size:16px;font-weight:650;letter-spacing:.2px;line-height:1.2}
+.brand .t2{font-size:11.5px;color:var(--faint);line-height:1.3}
+.hd-right{margin-left:auto;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.chip{
+  display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+  background:var(--surface-2);border:1px solid var(--border);font-size:12px;color:var(--muted);
+  white-space:nowrap;
+}
+.chip b{color:var(--text);font-weight:600;font-family:var(--mono);font-size:11.5px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none}
+.dot.on{background:var(--ok)}
+.dot.off{background:var(--err)}
+.iconbtn{
+  width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;
+  border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--muted);
+}
+.iconbtn:hover{color:var(--text);border-color:var(--faint)}
+
+/* ---------- 标签栏 ---------- */
+nav.tabs{display:flex;gap:2px;padding:0 0 0;overflow-x:auto;border-bottom:1px solid var(--border);background:var(--surface)}
+nav.tabs button{
+  appearance:none;background:none;border:none;border-bottom:2px solid transparent;
+  padding:11px 15px;color:var(--muted);font-size:13.5px;white-space:nowrap;display:flex;align-items:center;gap:7px;
+}
+nav.tabs button:hover{color:var(--text)}
+nav.tabs button[aria-selected="true"]{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+
+/* ---------- 通用 ---------- */
+main{padding:22px 0 60px}
+.panel{display:none}
+.panel.active{display:block;animation:fade .18s ease-out}
+@keyframes fade{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--shadow)}
+.card+.card{margin-top:16px}
+.card-h{display:flex;align-items:center;gap:10px;padding:13px 16px;border-bottom:1px solid var(--border)}
+.card-h h3{margin:0;font-size:13.5px;font-weight:650;letter-spacing:.2px}
+.card-h .sub{font-size:12px;color:var(--faint);margin-left:auto;font-family:var(--mono)}
+.card-b{padding:16px}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,340px);gap:16px;align-items:start}
+@media(max-width:960px){.grid2{grid-template-columns:minmax(0,1fr)}}
+
+label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 6px;font-weight:600}
+textarea,input[type=text],input[type=number],select{
+  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:9px;
+  padding:9px 11px;outline:none;transition:border-color .12s,box-shadow .12s;
+}
+textarea:focus,input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak);background:var(--surface)}
+textarea{resize:vertical;font-family:var(--mono);font-size:12.5px;line-height:1.65}
+.btn{
+  display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border-radius:9px;
+  border:1px solid var(--border);background:var(--surface-2);color:var(--text);font-weight:600;font-size:13px;
+}
+.btn:hover{border-color:var(--faint)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+html[data-theme="dark"] .btn.primary{color:#0e1116}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sm{padding:5px 10px;font-size:12px;border-radius:7px}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.mono{font-family:var(--mono)}
+.muted{color:var(--muted)}
+.faint{color:var(--faint)}
+.tag{
+  display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:6px;
+  font-size:11.5px;font-weight:650;font-family:var(--mono);letter-spacing:.2px;
+}
+.tag.ok{background:var(--ok-weak);color:var(--ok)}
+.tag.warn{background:var(--warn-weak);color:var(--warn)}
+.tag.err{background:var(--err-weak);color:var(--err)}
+.tag.neutral{background:var(--surface-2);color:var(--muted)}
+.tag.direct{background:var(--surface-2);color:var(--route-direct)}
+.tag.rag{background:var(--accent-weak);color:var(--route-rag)}
+.tag.multihop{background:var(--surface-2);color:var(--route-multihop)}
+.tag.agent{background:var(--surface-2);color:var(--route-agent)}
+
+/* ---------- 对话 ---------- */
+#chatlog{display:flex;flex-direction:column;gap:14px;min-height:120px;max-height:none}
+.msg{display:flex;gap:11px}
+.msg .av{
+  width:28px;height:28px;border-radius:8px;flex:none;display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:700;font-family:var(--mono);border:1px solid var(--border);
+}
+.msg.u .av{background:var(--surface-2);color:var(--muted)}
+.msg.a .av{background:var(--accent-weak);color:var(--accent);border-color:transparent}
+.msg .body{min-width:0;flex:1}
+.msg .who{font-size:11.5px;color:var(--faint);margin-bottom:4px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.bubble{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:12px 14px;white-space:pre-wrap;word-break:break-word}
+.msg.u .bubble{background:var(--surface-2)}
+.answer-hd{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:9px}
+.metric{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.ring{width:34px;height:34px;flex:none}
+.cites{margin-top:12px;border-top:1px dashed var(--border);padding-top:10px}
+.cite{display:flex;gap:9px;padding:7px 0;font-size:12.5px;align-items:flex-start}
+.cite .n{
+  width:19px;height:19px;border-radius:5px;background:var(--accent-weak);color:var(--accent);
+  font-family:var(--mono);font-size:11px;font-weight:700;flex:none;display:flex;align-items:center;justify-content:center;
+}
+.cite .cbody{min-width:0;flex:1}
+.cite .cmeta{font-family:var(--mono);font-size:11px;color:var(--faint);margin-bottom:2px;display:flex;gap:9px;flex-wrap:wrap}
+.cite .ctext{color:var(--muted);word-break:break-word}
+details.claims{margin-top:11px;border-top:1px dashed var(--border);padding-top:10px}
+details.claims summary{cursor:pointer;font-size:12.5px;color:var(--muted);font-weight:600}
+.claim{display:flex;gap:8px;padding:5px 0;font-size:12.5px;align-items:flex-start}
+.claim .mark{width:15px;flex:none;font-family:var(--mono);font-weight:700}
+.claim.sup .mark{color:var(--ok)}
+.claim.unsup .mark{color:var(--err)}
+.examples{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.ex{
+  padding:5px 11px;border-radius:999px;border:1px dashed var(--border);background:transparent;
+  color:var(--muted);font-size:12.5px;
+}
+.ex:hover{border-style:solid;color:var(--accent);border-color:var(--accent)}
+.stage{display:flex;gap:9px;align-items:center;color:var(--muted);font-size:12.5px}
+.bar{height:3px;border-radius:2px;background:var(--surface-2);overflow:hidden;flex:1;max-width:220px}
+.bar i{display:block;height:100%;width:38%;background:var(--accent);animation:slide 1.15s ease-in-out infinite}
+@keyframes slide{0%{margin-left:-38%}100%{margin-left:100%}}
+
+/* ---------- 表格 ---------- */
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:11.5px;text-transform:none;white-space:nowrap;background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:var(--surface-2)}
+td.num{font-family:var(--mono);white-space:nowrap}
+.scroll{overflow:auto;max-height:560px}
+
+/* ---------- 追踪瀑布 ---------- */
+.wf{display:flex;flex-direction:column;gap:5px}
+.wf .row2{display:grid;grid-template-columns:130px minmax(0,1fr) 76px;gap:10px;align-items:center;font-size:12.5px}
+.wf .nm{font-family:var(--mono);color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wf .track{position:relative;height:16px;background:var(--surface-2);border-radius:4px;overflow:hidden}
+.wf .seg{position:absolute;top:0;bottom:0;border-radius:3px;background:var(--accent);opacity:.85;min-width:2px}
+.wf .seg.n0{background:var(--route-rag)} .wf .seg.n1{background:var(--route-multihop)}
+.wf .seg.n2{background:var(--route-agent)} .wf .seg.n3{background:var(--route-direct)}
+.wf .ms{font-family:var(--mono);color:var(--faint);text-align:right}
+pre.json{
+  background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:12px;overflow:auto;
+  max-height:420px;font-family:var(--mono);font-size:11.5px;line-height:1.6;margin:0;color:var(--muted);
+}
+.empty{color:var(--faint);font-size:13px;padding:26px 0;text-align:center}
+.kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px 14px;font-size:12.5px}
+.kv dt{color:var(--faint);font-family:var(--mono);font-size:11.5px}
+.kv dd{margin:0;font-family:var(--mono);word-break:break-all}
+hr.sep{border:none;border-top:1px solid var(--border);margin:14px 0}
+.toast{
+  position:fixed;right:20px;bottom:20px;z-index:99;display:flex;flex-direction:column;gap:8px;
+}
+.toast div{
+  background:var(--surface);border:1px solid var(--border);border-left:3px solid var(--accent);
+  padding:10px 14px;border-radius:9px;box-shadow:var(--shadow);font-size:13px;max-width:340px;
+  animation:fade .18s ease-out;
+}
+.toast div.err{border-left-color:var(--err)}
+.toast div.ok{border-left-color:var(--ok)}
+footer{border-top:1px solid var(--border);padding:16px 0;color:var(--faint);font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="hd">
+      <div class="brand">
+        <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true">
+          <circle cx="16" cy="16" r="13" fill="none" stroke="var(--accent)" stroke-width="1.6"/>
+          <ellipse cx="16" cy="16" rx="13" ry="5.2" fill="none" stroke="var(--accent)" stroke-width="1.1" opacity=".55"/>
+          <circle cx="16" cy="16" r="3.6" fill="var(--accent)"/>
+          <circle cx="27.5" cy="11.5" r="1.9" fill="var(--accent)" opacity=".8"/>
+        </svg>
+        <div>
+          <div class="t1">星枢 StellarNexus</div>
+          <div class="t2">可自证的模块化复合智能系统 · 控制台</div>
+        </div>
+      </div>
+      <div class="hd-right">
+        <span class="chip" id="chip-health"><span class="dot" id="dot-health"></span>服务</span>
+        <span class="chip">嵌入 <b id="chip-embed">—</b></span>
+        <span class="chip">生成 <b id="chip-llm">—</b></span>
+        <span class="chip">重排 <b id="chip-rank">—</b></span>
+        <span class="chip">索引 <b id="chip-vec">—</b></span>
+        <span class="chip">知识 <b id="chip-corpus">—</b></span>
+        <button class="iconbtn" id="btn-theme" title="切换主题" aria-label="切换主题"></button>
+      </div>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" aria-selected="true" data-tab="chat">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 3.5h11v7h-6l-3.2 2.6V10.5H2.5z" stroke-linejoin="round"/></svg>对话
+      </button>
+      <button role="tab" aria-selected="false" data-tab="search">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="7" r="4.4"/><path d="M10.4 10.4 14 14" stroke-linecap="round"/></svg>检索调试
+      </button>
+      <button role="tab" aria-selected="false" data-tab="corpus">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2.5h7l3 3v8H3z" stroke-linejoin="round"/><path d="M5.6 8h4.8M5.6 10.6h3.2" stroke-linecap="round"/></svg>知识库
+      </button>
+      <button role="tab" aria-selected="false" data-tab="trace">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 3v4.5h4M3 12.5h4V8M8.6 2.6h4.4M8.6 7.8h4.4M8.6 13h4.4" stroke-linecap="round"/><circle cx="3" cy="2.5" r="1.3" fill="currentColor" stroke="none"/><circle cx="3" cy="13.2" r="1.3" fill="currentColor" stroke="none"/></svg>链路追踪
+      </button>
+      <button role="tab" aria-selected="false" data-tab="eval">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2.5 13.5h11" stroke-linecap="round"/><path d="M4.5 13.5V8M7.5 13.5V4.5M10.5 13.5V6.5M13 13.5V2.8" stroke-linecap="round"/></svg>评测门禁
+      </button>
+      <button role="tab" aria-selected="false" data-tab="about">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="5.6"/><path d="M8 7.3v3.6" stroke-linecap="round"/><circle cx="8" cy="5.3" r=".85" fill="currentColor" stroke="none"/></svg>系统信息
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- ==================== 对话 ==================== -->
+<section class="panel active" id="p-chat" role="tabpanel">
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <div class="card-h">
+          <h3>向星枢提问</h3>
+          <span class="sub" id="chat-hint">路由 · 检索 · 重排 · 生成 · 归因校验</span>
+        </div>
+        <div class="card-b">
+          <div id="chatlog">
+            <div class="empty">还没有对话。先在「知识库」灌入文档，或直接提问试试（系统会自动选择推理链路）。</div>
+          </div>
+          <hr class="sep">
+          <textarea id="chat-in" rows="2" placeholder="输入问题，Enter 发送，Shift+Enter 换行"></textarea>
+          <div class="row" style="margin-top:10px">
+            <button class="btn primary" id="chat-send">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 8h10M8.4 3.6 12.8 8l-4.4 4.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              发送
+            </button>
+            <label class="row" style="gap:6px;font-size:12.5px;color:var(--muted)">
+              <input type="checkbox" id="chat-trace" checked style="width:auto"> 返回链路追踪
+            </label>
+            <button class="btn sm" id="chat-clear" style="margin-left:auto">清空</button>
+          </div>
+          <div class="examples" id="chat-ex"></div>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <div class="card-h"><h3>最近回答</h3><span class="sub" id="chat-count">0</span></div>
+        <div class="card-b scroll" id="chat-side">
+          <div class="empty" style="padding:12px 0">暂无记录</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 检索 ==================== -->
+<section class="panel" id="p-search" role="tabpanel">
+  <div class="card">
+    <div class="card-h"><h3>三路混合检索调试</h3><span class="sub">BM25 + 稠密向量 → RRF → MMR → 精排</span></div>
+    <div class="card-b">
+      <div class="row">
+        <input type="text" id="se-q" placeholder="输入查询语句" style="flex:1;min-width:220px">
+        <label class="row" style="gap:6px;color:var(--muted);font-size:12.5px">Top-K
+          <input type="number" id="se-k" value="5" min="1" max="50" style="width:66px">
+        </label>
+        <button class="btn primary" id="se-go">检索</button>
+      </div>
+      <div class="examples" id="se-ex"></div>
+      <hr class="sep">
+      <div id="se-out"><div class="empty">尚无结果</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 知识库 ==================== -->
+<section class="panel" id="p-corpus" role="tabpanel">
+  <div class="grid2">
+    <div class="card">
+      <div class="card-h"><h3>导入文档</h3><span class="sub">切分 → 嵌入 → 建索引 → 重建 BM25</span></div>
+      <div class="card-b">
+        <label class="fl">文档标识（doc_id）</label>
+        <input type="text" id="ing-id" placeholder="例如 handbook-001">
+        <label class="fl" style="margin-top:12px">标题（可选）</label>
+        <input type="text" id="ing-title" placeholder="例如 运维手册">
+        <label class="fl" style="margin-top:12px">正文</label>
+        <textarea id="ing-text" rows="9" placeholder="粘贴文档正文，中文英文均可。文本超过切分阈值时会自动切成多个片段。"></textarea>
+        <div class="row" style="margin-top:10px">
+          <button class="btn primary" id="ing-go">写入知识库</button>
+          <button class="btn sm" id="ing-demo">载入示例语料</button>
+          <span class="faint" style="font-size:12px" id="ing-hint"></span>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>已入库文档</h3><span class="sub" id="doc-count">0</span></div>
+      <div class="card-b scroll" id="doc-list"><div class="empty" style="padding:12px 0">暂无文档</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 追踪 ==================== -->
+<section class="panel" id="p-trace" role="tabpanel">
+  <div class="grid2">
+    <div class="card">
+      <div class="card-h"><h3>Span 瀑布</h3><span class="sub" id="tr-which">未选择</span></div>
+      <div class="card-b">
+        <div id="tr-wf"><div class="empty">发起一次对话后，这里会展示完整的调用链耗时分布。</div></div>
+        <details style="margin-top:14px">
+          <summary style="cursor:pointer;font-size:12.5px;color:var(--muted);font-weight:600">原始 Span 树（JSON）</summary>
+          <pre class="json" id="tr-json" style="margin-top:10px">—</pre>
+        </details>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>本次会话的追踪</h3><span class="sub" id="tr-count">0</span></div>
+      <div class="card-b scroll" id="tr-list"><div class="empty" style="padding:12px 0">暂无追踪</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 评测 ==================== -->
+<section class="panel" id="p-eval" role="tabpanel">
+  <div class="card">
+    <div class="card-h">
+      <h3>黄金集评测与门禁</h3>
+      <label class="row" style="gap:6px;font-size:12.5px;color:var(--muted);margin-left:auto">
+        <input type="checkbox" id="ev-offline" checked style="width:auto"> 仅离线后端
+      </label>
+      <button class="btn sm primary" id="ev-go" style="margin-left:12px">运行评测</button>
+    </div>
+    <div class="card-b">
+      <div class="faint" style="font-size:12px;margin-bottom:10px" id="ev-hint">
+        离线后端（hash 嵌入 + mock 生成 + 词法重排）秒级出结果、指标确定，是门禁该跑的那条路径。
+      </div>
+      <div id="ev-verdict" class="row" style="margin-bottom:12px"></div>
+      <div id="ev-metrics"><div class="empty">尚未运行。点击右上角「运行评测」。</div></div>
+      <details style="margin-top:14px" id="ev-cases-wrap">
+        <summary style="cursor:pointer;font-size:12.5px;color:var(--muted);font-weight:600">逐条用例明细</summary>
+        <div class="scroll" style="margin-top:10px" id="ev-cases"></div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ==================== 系统信息 ==================== -->
+<section class="panel" id="p-about" role="tabpanel">
+  <div class="grid2">
+    <div class="card">
+      <div class="card-h"><h3>运行时后端</h3><span class="sub">实际生效的装配</span></div>
+      <div class="card-b"><dl class="kv" id="ab-stats"></dl></div>
+    </div>
+    <div class="card">
+      <div class="card-h"><h3>连接设置</h3></div>
+      <div class="card-b">
+        <label class="fl">API 基地址</label>
+        <input type="text" id="ab-base">
+        <div class="row" style="margin-top:10px">
+          <button class="btn sm primary" id="ab-save">保存并重连</button>
+          <button class="btn sm" id="ab-reset">恢复默认</button>
+        </div>
+        <p class="faint" style="font-size:12px;margin:10px 0 0">
+          默认与当前页面同源。若控制台通过 file:// 打开，请填写服务地址，例如 http://127.0.0.1:8000
+        </p>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-h"><h3>系统配置</h3><span class="sub">环境变量 SNX_* 覆盖</span></div>
+    <div class="card-b"><pre class="json" id="ab-config">—</pre></div>
+  </div>
+</section>
+
+</main>
+
+<footer class="wrap">
+  星枢 StellarNexus · 作者 <b>晨星</b> · 单文件零依赖控制台
+  <span id="ft-ver" class="mono"></span>
+</footer>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   控制台脚本 — 原生 JS，无框架无构建
+   作者: 晨星
+   ============================================================ */
+(function () {
+  "use strict";
+  var $ = function (s) { return document.querySelector(s); };
+  var LS_BASE = "snx.api.base", LS_THEME = "snx.theme";
+
+  /* ---------- API 基址 ---------- */
+  var API = (function () {
+    try {
+      var saved = localStorage.getItem(LS_BASE);
+      if (saved) return saved.replace(/\/+$/, "");
+    } catch (e) {}
+    if (location.protocol === "http:" || location.protocol === "https:") {
+      return location.origin;
+    }
+    return "http://127.0.0.1:8000";
+  })();
+
+  function api(path) { return API + path; }
+
+  function toast(msg, kind) {
+    var box = $("#toast");
+    var d = document.createElement("div");
+    if (kind) d.className = kind;
+    d.textContent = msg;
+    box.appendChild(d);
+    setTimeout(function () { d.remove(); }, kind === "err" ? 6000 : 3200);
+  }
+
+  function esc(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+  function num(v, n) {
+    if (v == null || isNaN(v)) return "—";
+    return Number(v).toFixed(n == null ? 3 : n);
+  }
+  function ms(v) {
+    if (v == null) return "—";
+    return v >= 1000 ? (v / 1000).toFixed(2) + " s" : Math.round(v) + " ms";
+  }
+  function ago(ts) {
+    var d = (Date.now() - ts) / 1000;
+    if (d < 60) return "刚刚";
+    if (d < 3600) return Math.floor(d / 60) + " 分钟前";
+    if (d < 86400) return Math.floor(d / 3600) + " 小时前";
+    return new Date(ts).toLocaleDateString("zh-CN");
+  }
+  function clock(ts) {
+    var d = new Date(ts);
+    var p = function (n) { return n < 10 ? "0" + n : "" + n; };
+    return p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
+
+  async function req(method, path, body) {
+    var opt = { method: method, headers: {} };
+    if (body !== undefined) {
+      opt.headers["Content-Type"] = "application/json";
+      opt.body = JSON.stringify(body);
+    }
+    var res = await fetch(api(path), opt);
+    var text = await res.text();
+    var data = null;
+    try { data = text ? JSON.parse(text) : null; } catch (e) { data = text; }
+    if (!res.ok) {
+      var detail = data && data.detail ? data.detail : (typeof data === "string" ? data : res.statusText);
+      throw new Error("HTTP " + res.status + " · " + detail);
+    }
+    return data;
+  }
+
+  /* ---------- 主题 ---------- */
+  var ICON_SUN = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="3.1"/><path d="M8 1.4v1.7M8 12.9v1.7M1.4 8h1.7M12.9 8h1.7M3.3 3.3l1.2 1.2M11.5 11.5l1.2 1.2M12.7 3.3l-1.2 1.2M4.5 11.5l-1.2 1.2" stroke-linecap="round"/></svg>';
+  var ICON_MOON = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 9.6A5.4 5.4 0 0 1 6.4 3a5.6 5.6 0 1 0 6.6 6.6z" stroke-linejoin="round"/></svg>';
+
+  function setTheme(t) {
+    document.documentElement.setAttribute("data-theme", t);
+    $("#btn-theme").innerHTML = t === "dark" ? ICON_SUN : ICON_MOON;
+    try { localStorage.setItem(LS_THEME, t); } catch (e) {}
+  }
+  (function initTheme() {
+    var saved = null;
+    try { saved = localStorage.getItem(LS_THEME); } catch (e) {}
+    if (!saved) saved = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    setTheme(saved);
+    $("#btn-theme").addEventListener("click", function () {
+      setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark");
+    });
+  })();
+
+  /* ---------- 标签切换 ---------- */
+  var tabs = document.querySelectorAll("nav.tabs button");
+  tabs.forEach(function (b) {
+    b.addEventListener("click", function () {
+      tabs.forEach(function (x) { x.setAttribute("aria-selected", "false"); });
+      b.setAttribute("aria-selected", "true");
+      document.querySelectorAll(".panel").forEach(function (p) { p.classList.remove("active"); });
+      $("#p-" + b.dataset.tab).classList.add("active");
+      if (b.dataset.tab === "about") loadStats();
+      if (b.dataset.tab === "corpus") loadDocs();
+    });
+  });
+  function showTab(name) {
+    var b = document.querySelector('nav.tabs button[data-tab="' + name + '"]');
+    if (b) b.click();
+  }
+
+  /* ---------- 健康检查 ---------- */
+  var HEALTHY = false;
+  async function loadHealth() {
+    try {
+      var h = await req("GET", "/health");
+      HEALTHY = true;
+      $("#dot-health").className = "dot on";
+      $("#chip-health").lastChild.textContent = "在线";
+      $("#chip-embed").textContent = h.backends.embedder;
+      $("#chip-llm").textContent = h.backends.llm;
+      $("#chip-rank").textContent = h.backends.reranker;
+      $("#chip-vec").textContent = h.backends.vector;
+      $("#ft-ver").textContent = "· v" + h.version;
+    } catch (e) {
+      HEALTHY = false;
+      $("#dot-health").className = "dot off";
+      $("#chip-health").lastChild.textContent = "离线";
+      $("#chip-embed").textContent = $("#chip-llm").textContent = "—";
+      $("#chip-rank").textContent = $("#chip-vec").textContent = "—";
+    }
+    if (HEALTHY) loadStats(true);
+  }
+
+  async function loadStats(silent) {
+    try {
+      var s = await req("GET", "/stats");
+      $("#chip-corpus").textContent = s.documents + " 篇 / " + s.chunks + " 片段";
+      var rows = [
+        ["文档数", s.documents], ["片段数", s.chunks], ["向量数", s.vectors],
+        ["嵌入后端", s.embedder], ["向量维度", s.dim], ["生成后端", s.llm],
+        ["重排后端", s.reranker], ["索引后端", s.vector_backend]
+      ];
+      $("#ab-stats").innerHTML = rows.map(function (r) {
+        return "<dt>" + esc(r[0]) + "</dt><dd>" + esc(r[1]) + "</dd>";
+      }).join("");
+      $("#ab-config").textContent = JSON.stringify(s.config, null, 2);
+      if (!silent) toast("已连接 " + API, "ok");
+    } catch (e) {
+      if (!silent) toast("获取系统状态失败：" + e.message, "err");
+    }
+  }
+
+  /* ---------- 环形进度 ---------- */
+  function ring(value, label) {
+    var R = 14, C = 2 * Math.PI * R;
+    var v = Math.max(0, Math.min(1, value == null ? 0 : value));
+    var col = v >= 0.6 ? "var(--ok)" : (v >= 0.3 ? "var(--warn)" : "var(--err)");
+    return '<svg class="ring" viewBox="0 0 34 34">' +
+      '<circle cx="17" cy="17" r="' + R + '" fill="none" stroke="var(--border)" stroke-width="3.4"/>' +
+      '<circle cx="17" cy="17" r="' + R + '" fill="none" stroke="' + col + '" stroke-width="3.4" ' +
+      'stroke-linecap="round" stroke-dasharray="' + C.toFixed(1) + '" ' +
+      'stroke-dashoffset="' + (C * (1 - v)).toFixed(1) + '" transform="rotate(-90 17 17)"/>' +
+      '<text x="17" y="20.4" text-anchor="middle" font-size="8.6" font-family="var(--mono)" ' +
+      'fill="' + col + '">' + label + '</text></svg>';
+  }
+
+  /* ============ 对话 ============ */
+  var history = [];
+
+  function renderAnswer(a, q, ts) {
+    var v = a.verification || {};
+    var g = a.verification ? a.verification.groundedness : null;
+    var citesHtml = "";
+    if (a.citations && a.citations.length) {
+      citesHtml = '<div class="cites"><div class="faint" style="font-size:11.5px;margin-bottom:5px">引用证据 · ' +
+        a.citations.length + ' 条</div>' + a.citations.map(function (c, i) {
+          return '<div class="cite"><div class="n">' + (i + 1) + '</div><div class="cbody">' +
+            '<div class="cmeta"><span>' + esc(c.doc_id) + '</span><span>' + esc(c.chunk_id) + '</span>' +
+            '<span>score ' + num(c.score) + '</span></div>' +
+            '<div class="ctext">' + esc(c.text) + '</div></div></div>';
+        }).join("") + "</div>";
+    }
+    var claimsHtml = "";
+    if (v.claims && v.claims.length) {
+      var sup = v.claims.filter(function (c) { return c.supported; }).length;
+      claimsHtml = '<details class="claims"><summary>断言级归因校验 · ' + sup + "/" + v.claims.length +
+        ' 条被证据支持</summary>' + v.claims.map(function (c) {
+          return '<div class="claim ' + (c.supported ? "sup" : "unsup") + '">' +
+            '<span class="mark">' + (c.supported ? "✓" : "✕") + "</span>" +
+            '<span>' + esc(c.text) + ' <span class="faint mono" style="font-size:11px">[' + num(c.score, 2) +
+            (c.evidence_id ? " · " + esc(c.evidence_id) : "") + "]</span></span></div>";
+        }).join("") + "</details>";
+    }
+    var routeCls = a.route ? a.route.path : "neutral";
+    var hd = '<div class="answer-hd">' +
+      (a.route ? '<span class="tag ' + routeCls + '">' + a.route.path + '</span>' : "") +
+      (a.verification ? '<span class="tag ' + (a.verification.passed ? "ok" : "warn") + '">' +
+        (a.verification.passed ? "校验通过" : "校验未过") + "</span>" : '<span class="tag neutral">未经校验</span>') +
+      '<span class="metric">' + ring(g, g == null ? "—" : num(g, 2)) + "忠实度</span>" +
+      '<span class="metric">耗时 <b class="mono">' + ms(a.latency_ms) + "</b></span>" +
+      '<span class="metric">' + clock(ts) + "</span>" +
+      (a.trace_id ? '<a href="#" class="mono" style="font-size:11.5px" data-trace="' + esc(a.trace_id) + '">trace ' + esc(a.trace_id) + "</a>" : "") +
+      "</div>";
+    var note = a.metadata && a.metadata.note ? a.metadata.note : "";
+    if (a.route && a.route.reason) {
+      hd += '<div class="faint" style="font-size:11.5px;margin-bottom:8px">路由依据：' + esc(a.route.reason) +
+        (note ? " · " + esc(note) : "") + "</div>";
+    }
+    return '<div class="msg a"><div class="av">星</div><div class="body">' +
+      '<div class="who"><span>星枢</span></div>' +
+      '<div class="bubble">' + hd + esc(a.text) + citesHtml + claimsHtml + "</div></div></div>";
+  }
+
+  function pushTurn(q, ts) {
+    var log = $("#chatlog");
+    var em = log.querySelector(".empty");
+    if (em) em.remove();
+    log.insertAdjacentHTML("beforeend",
+      '<div class="msg u"><div class="av">你</div><div class="body"><div class="who"><span>' +
+      clock(ts) + '</span></div><div class="bubble">' + esc(q) + "</div></div></div>");
+    var wait = "wait-" + ts;
+    log.insertAdjacentHTML("beforeend",
+      '<div class="msg a" id="' + wait + '"><div class="av">星</div><div class="body"><div class="who"><span>星枢</span></div>' +
+      '<div class="bubble"><div class="stage"><span>正在处理</span><span class="bar"><i></i></span>' +
+      '<span class="mono" id="' + wait + '-t">0.0s</span></div></div></div></div>');
+    log.scrollTop = log.scrollHeight;
+    return wait;
+  }
+
+  async function ask(q) {
+    if (!q.trim()) return;
+    var ts = Date.now();
+    pushTurn(q, ts);
+    var wait = "wait-" + ts;
+    var t0 = performance.now();
+    var timer = setInterval(function () {
+      var el = document.getElementById(wait + "-t");
+      if (el) el.textContent = ((performance.now() - t0) / 1000).toFixed(1) + "s";
+    }, 100);
+    try {
+      var a = await req("POST", "/chat", { query: q, with_trace: $("#chat-trace").checked });
+      clearInterval(timer);
+      document.getElementById(wait).outerHTML = renderAnswer(a, q, ts);
+      history.unshift({ q: q, a: a, ts: ts });
+      renderHistory();
+      if (a.metadata && a.metadata.trace) {
+        traces.unshift({ id: a.trace_id, q: q, ts: ts, tree: a.metadata.trace });
+        renderTraces();
+      }
+    } catch (e) {
+      clearInterval(timer);
+      var node = document.getElementById(wait);
+      if (node) node.outerHTML = '<div class="msg a"><div class="av">星</div><div class="body">' +
+        '<div class="bubble"><span class="tag err">请求失败</span><div style="margin-top:8px">' +
+        esc(e.message) + "</div></div></div></div>";
+      toast("请求失败：" + e.message, "err");
+    }
+    $("#chatlog").scrollTop = $("#chatlog").scrollHeight;
+  }
+
+  function renderHistory() {
+    $("#chat-count").textContent = history.length;
+    var side = $("#chat-side");
+    if (!history.length) { side.innerHTML = '<div class="empty" style="padding:12px 0">暂无记录</div>'; return; }
+    side.innerHTML = history.map(function (h, i) {
+      var g = h.a.verification ? h.a.verification.groundedness : null;
+      var ok = h.a.verification ? h.a.verification.passed : null;
+      return '<div class="cite" style="border-bottom:1px solid var(--border);padding:9px 0">' +
+        '<div class="n">' + (i + 1) + "</div><div class='cbody'>" +
+        '<div style="font-size:12.5px;font-weight:600;margin-bottom:3px">' + esc(h.q.length > 40 ? h.q.slice(0, 40) + "…" : h.q) + "</div>" +
+        '<div class="cmeta"><span>' + (h.a.route ? h.a.route.path : "?") + "</span>" +
+        "<span>" + ms(h.a.latency_ms) + "</span>" +
+        "<span>" + (g == null ? "无校验" : "忠实度 " + num(g, 2)) + "</span>" +
+        (ok === null ? "" : '<span class="' + (ok ? "" : "faint") + '">' + (ok ? "通过" : "未过") + "</span>") +
+        "<span>" + ago(h.ts) + "</span></div></div></div>";
+    }).join("");
+  }
+
+  var EX = [
+    "星枢系统用了哪几种检索方式？",
+    "为什么归因校验要用 IDF 加权？",
+    "对比 BM25 和稠密向量两路召回的区别",
+    "12 乘以 43 等于多少",
+    "你好"
+  ];
+  function renderExamples(box, handler) {
+    box.innerHTML = EX.map(function (t) { return '<button class="ex">' + esc(t) + "</button>"; }).join("");
+    box.querySelectorAll("button").forEach(function (b) {
+      b.addEventListener("click", function () { handler(b.textContent); });
+    });
+  }
+  renderExamples($("#chat-ex"), function (t) { $("#chat-in").value = t; ask(t); });
+  renderExamples($("#se-ex"), function (t) { $("#se-q").value = t; doSearch(); });
+
+  $("#chat-send").addEventListener("click", function () { ask($("#chat-in").value); $("#chat-in").value = ""; });
+  $("#chat-in").addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask(this.value); this.value = ""; }
+  });
+  $("#chat-clear").addEventListener("click", function () {
+    history = [];
+    $("#chatlog").innerHTML = '<div class="empty">已清空。可以继续提问。</div>';
+    renderHistory();
+  });
+  document.addEventListener("click", function (e) {
+    var a = e.target.closest("a[data-trace]");
+    if (a) { e.preventDefault(); selectTrace(a.dataset.trace); showTab("trace"); }
+  });
+
+  /* ============ 检索 ============ */
+  async function doSearch() {
+    var q = $("#se-q").value.trim();
+    if (!q) { toast("请输入查询语句"); return; }
+    var k = parseInt($("#se-k").value, 10) || 5;
+    $("#se-out").innerHTML = '<div class="empty">检索中…</div>';
+    try {
+      var hits = await req("POST", "/search", { query: q, k: k });
+      if (!hits.length) { $("#se-out").innerHTML = '<div class="empty">没有命中。知识库可能为空。</div>'; return; }
+      $("#se-out").innerHTML = '<table><thead><tr><th>#</th><th>score</th><th>来源</th><th>片段</th><th>正文</th></tr></thead><tbody>' +
+        hits.map(function (h, i) {
+          return "<tr><td class='num'>" + (i + 1) + "</td><td class='num'>" + num(h.score) +
+            "</td><td class='mono' style='font-size:11.5px'>" + esc(h.source) + "</td>" +
+            "<td class='mono' style='font-size:11.5px'>" + esc(h.doc_id) + "<br><span class='faint'>" + esc(h.chunk_id) + "</span></td>" +
+            "<td>" + esc(h.text) + "</td></tr>";
+        }).join("") + "</tbody></table>";
+    } catch (e) {
+      $("#se-out").innerHTML = '<div class="empty">检索失败：' + esc(e.message) + "</div>";
+    }
+  }
+  $("#se-go").addEventListener("click", doSearch);
+  $("#se-q").addEventListener("keydown", function (e) { if (e.key === "Enter") doSearch(); });
+
+  /* ============ 知识库 ============ */
+  async function loadDocs() {
+    try {
+      var docs = await req("GET", "/documents");
+      $("#doc-count").textContent = docs.length;
+      if (!docs.length) { $("#doc-list").innerHTML = '<div class="empty" style="padding:12px 0">暂无文档</div>'; return; }
+      $("#doc-list").innerHTML = docs.map(function (d) {
+        return '<div class="cite" style="border-bottom:1px solid var(--border);padding:9px 0">' +
+          '<div class="n">' + (d.chunks || 0) + "</div><div class='cbody'>" +
+          '<div style="font-size:12.5px;font-weight:600">' + esc(d.title || d.doc_id) + "</div>" +
+          '<div class="cmeta"><span>' + esc(d.doc_id) + "</span><span>" + esc(d.source || "inline") + "</span></div>" +
+          '<div class="row" style="margin-top:5px"><button class="btn sm" data-del="' + esc(d.doc_id) + '">删除</button></div>' +
+          "</div></div>";
+      }).join("");
+      $("#doc-list").querySelectorAll("button[data-del]").forEach(function (b) {
+        b.addEventListener("click", async function () {
+          try {
+            await req("DELETE", "/documents/" + encodeURIComponent(b.dataset.del));
+            toast("已删除 " + b.dataset.del, "ok");
+            loadDocs(); loadHealth();
+          } catch (e) { toast("删除失败：" + e.message, "err"); }
+        });
+      });
+    } catch (e) {
+      $("#doc-list").innerHTML = '<div class="empty" style="padding:12px 0">读取失败：' + esc(e.message) + "</div>";
+    }
+  }
+
+  var ING_SAMPLE = [
+    { doc_id: "handbook-001", text: "星枢系统的检索层由三路组成：BM25 负责字面精确匹配，稠密向量负责语义近似匹配，结构先验负责给标题与摘要加权。三路结果通过 RRF 倒数排名融合后，再用 MMR 去冗余，最后交给精排模型收紧候选。多路召回的价值在于互补：专有名词靠字面，同义表述靠语义，只用任意一路都会在某一类查询上明显掉分。" },
+    { doc_id: "handbook-002", text: "归因校验把答案拆成若干条断言，逐条与引用片段计算支持度。词汇覆盖度必须用 IDF 加权，否则“的”“了”“是”这类高频虚词会让几乎所有断言看起来都被支持，校验就失去区分度。任何一条断言的支持度低于阈值时，该轮回答判为未通过，系统会在受限轮次内收紧提示词重新生成，仍然不过则如实标注未通过，而不是把不确定的内容当成事实输出。" }
+  ];
+
+  $("#ing-demo").addEventListener("click", function () {
+    $("#ing-id").value = ING_SAMPLE[0].doc_id;
+    $("#ing-title").value = "星枢运维手册";
+    $("#ing-text").value = ING_SAMPLE[0].text + "\n\n" + ING_SAMPLE[1].text;
+    $("#ing-hint").textContent = "已填入示例，直接点「写入知识库」即可";
+  });
+
+  $("#ing-go").addEventListener("click", async function () {
+    var id = $("#ing-id").value.trim();
+    var text = $("#ing-text").value.trim();
+    if (!id || !text) { toast("doc_id 与正文都不能为空", "err"); return; }
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = "写入中…";
+    try {
+      var r = await req("POST", "/ingest", {
+        docs: [{ doc_id: id, text: text, meta: { title: $("#ing-title").value.trim() || id, source: "console" } }]
+      });
+      toast("已写入 " + r.chunks + " 个片段，当前共 " + r.documents + " 篇", "ok");
+      $("#ing-text").value = "";
+      $("#ing-id").value = "";
+      $("#ing-title").value = "";
+      $("#ing-hint").textContent = "";
+      loadDocs(); loadHealth();
+    } catch (e) {
+      toast("写入失败：" + e.message, "err");
+    }
+    btn.disabled = false;
+    btn.innerHTML = "写入知识库";
+  });
+
+  /* ============ 追踪 ============ */
+  var traces = [];
+  function flatSpans(node, depth, out) {
+    out = out || [];
+    node.children.forEach(function (c) {
+      out.push({ node: c, depth: depth });
+      flatSpans(c, depth + 1, out);
+    });
+    return out;
+  }
+  function renderTraces() {
+    $("#tr-count").textContent = traces.length;
+    var box = $("#tr-list");
+    if (!traces.length) { box.innerHTML = '<div class="empty" style="padding:12px 0">暂无追踪</div>'; return; }
+    box.innerHTML = traces.map(function (t) {
+      return '<div class="cite" style="border-bottom:1px solid var(--border);padding:9px 0;cursor:pointer" data-t="' + esc(t.id) + '">' +
+        '<div class="n">' + (t.tree.duration_ms >= 1000 ? (t.tree.duration_ms / 1000).toFixed(1) + "s" : Math.round(t.tree.duration_ms) + "ms") + "</div>" +
+        '<div class="cbody"><div style="font-size:12.5px;font-weight:600;margin-bottom:3px">' +
+        esc(t.q.length > 30 ? t.q.slice(0, 30) + "…" : t.q) + "</div>" +
+        '<div class="cmeta"><span class="mono">' + esc(t.id) + "</span><span>" + ago(t.ts) + "</span>" +
+        "<span>" + (t.tree.children ? t.tree.children.length : 0) + " 个阶段</span></div></div></div>";
+    }).join("");
+    box.querySelectorAll("[data-t]").forEach(function (el) {
+      el.addEventListener("click", function () { selectTrace(el.dataset.t); });
+    });
+  }
+  function selectTrace(id) {
+    var t = traces.filter(function (x) { return x.id === id; })[0];
+    $("#tr-which").textContent = id;
+    if (!t) { $("#tr-json").textContent = "—"; return; }
+    renderWaterfall(t.tree, id);
+    $("#tr-json").textContent = JSON.stringify(t.tree, null, 2);
+  }
+  function renderWaterfall(root, id) {
+    var items = flatSpans(root, 0, []);
+    var total = Math.max(root.duration_ms, 1);
+    if (!items.length) { $("#tr-wf").innerHTML = '<div class="empty">该请求没有子阶段</div>'; return; }
+    var html = '<div class="wf">';
+    items.forEach(function (it) {
+      var n = it.node, d = n.duration_ms;
+      var pct = Math.max((d / total) * 100, 0.6);
+      var left = 0;
+      html += '<div class="row2">' +
+        '<div class="nm" title="' + esc(n.name) + '" style="padding-left:' + Math.min(it.depth * 12, 36) + 'px">' +
+        esc(n.name) + "</div>" +
+        '<div class="track"><div class="seg n' + (it.depth % 4) + '" style="left:' + left + "%;width:" + pct + '%"></div></div>' +
+        '<div class="ms">' + ms(d) + "</div></div>";
+      var attrs = n.attrs && Object.keys(n.attrs).length
+        ? Object.keys(n.attrs).map(function (k) { return k + "=" + n.attrs[k]; }).join(" · ") : "";
+      if (attrs) {
+        html += '<div style="font-family:var(--mono);font-size:11px;color:var(--faint);padding-left:' +
+          (Math.min(it.depth * 12, 36) + 130) + 'px;margin-top:-3px;word-break:break-all">' + esc(attrs) + "</div>";
+      }
+    });
+    html += "</div>";
+    $("#tr-wf").innerHTML = html;
+  }
+
+  /* ============ 评测 ============ */
+  var TH_META = {
+    "recall@1": "榜首命中率", "recall@3": "前三命中率", "recall@5": "前五命中率",
+    "mrr@10": "平均倒数排名", "ndcg@5": "归一化折损累计增益",
+    "groundedness": "答案忠实度", "latency_p95_ms": "P95 延迟",
+    "latency_p50_ms": "P50 延迟", "cases": "用例数"
+  };
+  function syncEvalHint() {
+    var off = $("#ev-offline").checked;
+    $("#ev-hint").textContent = off
+      ? "离线后端（hash 嵌入 + mock 生成 + 词法重排）秒级出结果、指标确定，是门禁该跑的那条路径。"
+      : "当前按服务端真实配置评测：CPU 推理下每条用例 20 秒以上，8 条可能要几分钟，请不要中途关闭页面。";
+  }
+  $("#ev-offline").addEventListener("change", syncEvalHint);
+  syncEvalHint();
+
+  async function runEval() {
+    var btn = $("#ev-go");
+    var offline = $("#ev-offline").checked;
+    btn.disabled = true;
+    var old = btn.textContent;
+    btn.textContent = "运行中…";
+    $("#ev-metrics").innerHTML = '<div class="empty">评测进行中，全链路逐条执行，请稍候…' +
+      (offline ? "" : "（真实模型较慢）") + "</div>";
+    try {
+      var r = await req("POST", "/evaluate" + (offline ? "?offline=true" : ""));
+      var pass = r.passed;
+      $("#ev-verdict").innerHTML = '<span class="tag ' + (pass ? "ok" : "err") + '">' +
+        (pass ? "门禁通过" : "门禁未通过") + "</span>" +
+        '<span class="tag neutral">' + (offline ? "离线基线" : "真实后端") + "</span>" +
+        '<span class="muted" style="font-size:12.5px">' +
+        (pass ? "全部指标达到阈值。" : "存在指标低于阈值。") + "</span>" +
+        (r.failures && r.failures.length ? '<span class="tag warn">' + r.failures.length + " 项未达标</span>" : "");
+      var keys = Object.keys(r.metrics);
+      $("#ev-metrics").innerHTML = "<table><thead><tr><th>指标</th><th>含义</th><th>实测</th><th>阈值</th><th>判定</th></tr></thead><tbody>" +
+        keys.map(function (k) {
+          var v = r.metrics[k], th = r.thresholds[k];
+          var isLat = k.indexOf("latency") === 0;
+          var ok = th == null ? null : (isLat ? v <= th : v >= th);
+          var fmt = k.indexOf("latency") === 0 ? ms(v) : (k === "cases" ? String(v) : num(v, 4));
+          var fmtTh = th == null ? "—" : (isLat ? ms(th) : num(th, 2));
+          return "<tr><td><b>" + esc(k) + "</b></td><td class='muted'>" + esc(TH_META[k] || "") +
+            "</td><td class='num'>" + fmt + "</td><td class='num faint'>" + fmtTh + "</td><td>" +
+            (ok === null ? '<span class="tag neutral">参考</span>'
+              : '<span class="tag ' + (ok ? "ok" : "err") + '">' + (ok ? "达标" : "未达标") + "</span>") +
+            "</td></tr>";
+        }).join("") + "</tbody></table>";
+      if (r.cases && r.cases.length) {
+        $("#ev-cases").innerHTML = "<table><thead><tr><th>查询</th><th>路由</th><th>R@1</th><th>R@3</th><th>nDCG@5</th><th>忠实度</th><th>延迟</th><th>判定</th></tr></thead><tbody>" +
+          r.cases.map(function (c) {
+            return "<tr><td>" + esc(c.query) + "</td><td class='mono' style='font-size:11.5px'>" + esc(c.route) +
+              "</td><td class='num'>" + num(c["recall@1"], 2) + "</td><td class='num'>" + num(c["recall@3"], 2) +
+              "</td><td class='num'>" + num(c["ndcg@5"], 2) + "</td><td class='num'>" + num(c.groundedness, 2) +
+              "</td><td class='num'>" + ms(c.latency_ms) + "</td><td>" +
+              '<span class="tag ' + (c.passed ? "ok" : "err") + '">' + (c.passed ? "通过" : "未过") + "</span></td></tr>";
+          }).join("") + "</tbody></table>";
+      }
+      toast(pass ? "门禁通过" : "门禁未通过：" + (r.failures || []).join("；"), pass ? "ok" : "err");
+    } catch (e) {
+      $("#ev-metrics").innerHTML = '<div class="empty">评测失败：' + esc(e.message) + "</div>";
+      toast("评测失败：" + e.message, "err");
+    }
+    btn.disabled = false;
+    btn.textContent = old;
+  }
+  $("#ev-go").addEventListener("click", runEval);
+
+  /* ============ 设置 ============ */
+  $("#ab-base").value = API;
+  $("#ab-save").addEventListener("click", function () {
+    var v = $("#ab-base").value.trim().replace(/\/+$/, "");
+    if (!v) { toast("地址不能为空", "err"); return; }
+    try { localStorage.setItem(LS_BASE, v); } catch (e) {}
+    API = v;
+    toast("已切换到 " + v);
+    loadHealth(); loadDocs();
+  });
+  $("#ab-reset").addEventListener("click", function () {
+    try { localStorage.removeItem(LS_BASE); } catch (e) {}
+    API = location.protocol.indexOf("http") === 0 ? location.origin : "http://127.0.0.1:8000";
+    $("#ab-base").value = API;
+    toast("已恢复默认地址");
+    loadHealth();
+  });
+
+  /* ============ 启动 ============ */
+  loadHealth();
+  loadDocs();
+})();
+</script>
+</body>
+</html>

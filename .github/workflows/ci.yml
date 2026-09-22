@@ -1,0 +1,140 @@
+name: CI
+
+# 门禁设计原则：全部在干净 runner 上跑，不依赖任何本机缓存、模型或密钥。
+# 所有需要模型/网络的检查都走离线回退实现，因此结果确定、可复现。
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUTF8: "1"
+  PYTHONIOENCODING: utf-8
+  # 离线后端：CI 不装模型、不连外部服务
+  SNX_EMBED_BACKEND: hash
+  SNX_LLM_BACKEND: mock
+  SNX_RERANK_BACKEND: lexical
+
+jobs:
+  offline-gate:
+    name: 离线门禁（Python ${{ matrix.python }}）
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+
+      - name: 安装（零编译，干净环境一键复现）
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: 依赖轮子可用性（确认没有一句「需要编译器」）
+        run: |
+          python scripts/check_wheels.py --platform linux --python cp311
+          python scripts/check_wheels.py --platform linux --python cp313
+
+      - name: 静态检查
+        run: ruff check src tests scripts
+
+      - name: 分层与循环依赖
+        run: python scripts/check_imports.py
+
+      - name: 黄金语料健康度（超阈值文档必须产生多片段）
+        run: python scripts/check_corpus.py
+
+      - name: 一键自检（离线，15 项）
+        run: stellarnx verify
+
+      - name: 单元与集成测试
+        run: pytest -q
+
+      - name: 端到端（真起 HTTP 服务，跑成功流与错误流）
+        run: python scripts/e2e.py
+
+      - name: 评测门禁（退出码即结论）
+        run: stellarnx eval
+
+      - name: 汇总结果
+        if: always()
+        run: |
+          echo "## 离线门禁（Python ${{ matrix.python }}）" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat data/e2e-report.txt >> $GITHUB_STEP_SUMMARY 2>/dev/null || echo "无 e2e 报告" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+  console:
+    name: 控制台无头冒烟
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: 安装测试依赖（控制台本体零构建，这里只为 jsdom）
+        run: npm install --no-audit --no-fund
+
+      - name: 无头执行内联脚本并断言 DOM
+        run: node scripts/web_smoke.mjs
+
+      - name: 控制台零外部依赖硬校验
+        run: |
+          python - <<'PY'
+          import sys, pathlib
+          page = pathlib.Path("web/index.html").read_text(encoding="utf-8")
+          banned = ("cdn.", "unpkg", "jsdelivr", "googleapis", 'src="http', "@import")
+          hit = [b for b in banned if b in page]
+          if hit:
+              print(f"[FAIL] 控制台引用了外部资源: {hit}")
+              sys.exit(1)
+          if "<script>" not in page or "<style>" not in page:
+              print("[FAIL] 控制台必须是单文件内联 CSS/JS")
+              sys.exit(1)
+          print("[PASS] 单文件、内联、零外部资源")
+          PY
+
+  package:
+    name: 可安装性与可复现性
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: 按 requirements.lock 复现环境
+        run: |
+          python -m venv .verify-venv
+          .verify-venv/bin/python -m pip install --upgrade pip
+          .verify-venv/bin/pip install -r requirements.lock
+          .verify-venv/bin/pip install -e . --no-deps
+
+      - name: 复现环境自检
+        run: .verify-venv/bin/stellarnx verify
+
+      - name: 构建发行包
+        run: |
+          .verify-venv/bin/pip install build
+          .verify-venv/bin/python -m build --wheel
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel
+          path: dist/*.whl
+          if-no-files-found: error

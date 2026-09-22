@@ -1,0 +1,450 @@
+openapi: 3.0.3
+info:
+  title: 星枢 StellarNexus API
+  version: 1.0.0
+  description: |
+    可自证的模块化复合智能系统。检索增强 + 自适应链路路由 + 断言级归因校验 + 智能体闭环。
+
+    所有错误统一返回 `{"detail": "...", "code": "..."}`，不泄漏堆栈。
+  contact:
+    name: 晨星
+  license:
+    name: Apache-2.0
+
+servers:
+  - url: http://127.0.0.1:8000
+    description: 本地默认
+
+tags:
+  - name: system
+    description: 健康与状态
+  - name: corpus
+    description: 知识库读写
+  - name: retrieve
+    description: 检索
+  - name: qa
+    description: 问答
+  - name: observe
+    description: 链路追踪
+  - name: eval
+    description: 评测与门禁
+
+paths:
+  /health:
+    get:
+      tags: [system]
+      summary: 存活检查与后端信息
+      operationId: health
+      responses:
+        "200":
+          description: 服务正常
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /stats:
+    get:
+      tags: [system]
+      summary: 运行状态与配置快照
+      operationId: stats
+      responses:
+        "200":
+          description: 状态
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatsResponse"
+
+  /ingest:
+    post:
+      tags: [corpus]
+      summary: 批量导入文档（切分 + 嵌入 + 建索引 + 重建 BM25）
+      operationId: ingest
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IngestRequest"
+      responses:
+        "200":
+          description: 导入结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IngestResponse"
+        "400":
+          description: docs 为空，或元素缺少 doc_id / text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /documents:
+    get:
+      tags: [corpus]
+      summary: 已入库文档列表（含每篇片段数）
+      operationId: listDocuments
+      responses:
+        "200":
+          description: 文档列表
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DocumentInfo"
+
+  /documents/{doc_id}:
+    delete:
+      tags: [corpus]
+      summary: 删除文档及其片段，并重建索引
+      operationId: deleteDocument
+      parameters:
+        - name: doc_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: 删除结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  removed_chunks: { type: integer }
+                  doc_id: { type: string }
+
+  /search:
+    post:
+      tags: [retrieve]
+      summary: 混合检索（BM25 + 稠密 → RRF → MMR → 精排）
+      operationId: search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SearchRequest"
+      responses:
+        "200":
+          description: 命中列表，按分数降序
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SearchHit"
+
+  /chat:
+    post:
+      tags: [qa]
+      summary: 问答（自动路由，返回答案与引用）
+      operationId: chat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: 答案
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Answer"
+        "504":
+          description: 上游模型超时
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /chat/stream:
+    get:
+      tags: [qa]
+      summary: 问答事件流（SSE）
+      description: |
+        依次推送：
+        - `stage`：`{stage, duration_ms?, attrs?}`，start 与各调用阶段
+        - `answer`：`{text, trace_id, citations[]}`
+        - `done`：`{groundedness}`
+        - `error`：`{code, detail}`
+      operationId: chatStream
+      parameters:
+        - name: query
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: text/event-stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /trace/{trace_id}:
+    get:
+      tags: [observe]
+      summary: 取回某次请求的 Span 树
+      operationId: getTrace
+      parameters:
+        - name: trace_id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Span 树
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Span"
+        "404":
+          description: trace 不存在或已被淘汰（内存中最多保留 200 条）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /evaluate:
+    post:
+      tags: [eval]
+      summary: 跑黄金集并给出门禁结论
+      operationId: evaluate
+      parameters:
+        - name: corpus
+          in: query
+          required: false
+          schema:
+            type: string
+            default: data/golden/corpus.jsonl
+            description: 相对路径按仓库根解析
+        - name: questions
+          in: query
+          required: false
+          schema:
+            type: string
+            default: data/golden/questions.jsonl
+        - name: offline
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
+          description: |
+            强制使用零依赖后端（hash + mock + lexical）评测。
+            门禁需要「快且确定」，而真实模型下 8 条用例要几分钟且指标有波动，
+            因此控制台默认取 true；false 时按服务端真实配置评测，结果作为质量参考。
+      responses:
+        "200":
+          description: 评测报告
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EvalReport"
+        "404":
+          description: 评测数据文件不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        detail: { type: string }
+        code: { type: string }
+
+    HealthResponse:
+      type: object
+      properties:
+        status: { type: string, example: ok }
+        version: { type: string, example: 1.0.0 }
+        author: { type: string, example: 晨星 }
+        backends:
+          type: object
+          properties:
+            embedder: { type: string, example: ollama:bge-m3 }
+            llm: { type: string, example: "ollama:qwen2.5:1.5b-instruct" }
+            reranker: { type: string, example: llm-listwise }
+            vector: { type: string, example: faiss }
+
+    StatsResponse:
+      type: object
+      properties:
+        documents: { type: integer }
+        chunks: { type: integer }
+        vectors: { type: integer, description: 必须等于 chunks，否则说明索引未恢复 }
+        embedder: { type: string }
+        dim: { type: integer, example: 1024 }
+        llm: { type: string }
+        reranker: { type: string }
+        vector_backend: { type: string }
+        config: { type: object, additionalProperties: true }
+
+    IngestRequest:
+      type: object
+      required: [docs]
+      properties:
+        docs:
+          type: array
+          items:
+            type: object
+            required: [doc_id, text]
+            properties:
+              doc_id: { type: string }
+              text: { type: string }
+              meta: { type: object, additionalProperties: true }
+
+    IngestResponse:
+      type: object
+      properties:
+        chunks: { type: integer, description: 本次写入的片段数 }
+        documents: { type: integer, description: 库内文档总数 }
+
+    DocumentInfo:
+      type: object
+      properties:
+        doc_id: { type: string }
+        title: { type: string }
+        source: { type: string }
+        meta: { type: object, additionalProperties: true }
+        created_at: { type: string }
+        chunks: { type: integer, description: 该文档的片段数 }
+
+    SearchRequest:
+      type: object
+      required: [query]
+      properties:
+        query: { type: string }
+        k: { type: integer, default: 5, minimum: 1, maximum: 50 }
+
+    SearchHit:
+      type: object
+      properties:
+        chunk_id: { type: string }
+        doc_id: { type: string }
+        score: { type: number, format: float }
+        source: { type: string, enum: [bm25, dense, hybrid, rerank, agent] }
+        text: { type: string, description: 截断至 600 字符 }
+
+    Citation:
+      type: object
+      properties:
+        chunk_id: { type: string }
+        doc_id: { type: string }
+        text: { type: string, description: 截断至 400 字符 }
+        score: { type: number, format: float }
+
+    Claim:
+      type: object
+      properties:
+        text: { type: string }
+        supported: { type: boolean }
+        score: { type: number, format: float }
+        evidence_id: { type: string, nullable: true }
+
+    Verification:
+      type: object
+      properties:
+        groundedness:
+          type: number
+          format: float
+          description: 被证据支持的断言数 / 断言总数；断言数为 0 时取 0.0 而非 1.0
+        threshold: { type: number, format: float }
+        passed: { type: boolean }
+        claims:
+          type: array
+          items: { $ref: "#/components/schemas/Claim" }
+
+    Route:
+      type: object
+      properties:
+        path: { type: string, enum: [direct, rag, multihop, agent] }
+        reason: { type: string }
+        confidence: { type: number, format: float }
+        features: { type: object, additionalProperties: true }
+
+    Answer:
+      type: object
+      properties:
+        text: { type: string }
+        citations:
+          type: array
+          items: { $ref: "#/components/schemas/Citation" }
+        route: { allOf: [{ $ref: "#/components/schemas/Route" }], nullable: true }
+        verification: { allOf: [{ $ref: "#/components/schemas/Verification" }], nullable: true }
+        trace_id: { type: string }
+        latency_ms: { type: number, format: float }
+        metadata:
+          type: object
+          additionalProperties: true
+          description: 含 note / embedder / llm / reranker / vector_backend / trace
+
+    ChatRequest:
+      type: object
+      required: [query]
+      properties:
+        query: { type: string }
+        with_trace: { type: boolean, default: false }
+
+    Span:
+      type: object
+      properties:
+        name: { type: string }
+        trace_id: { type: string }
+        duration_ms: { type: number, format: float }
+        attrs: { type: object, additionalProperties: true }
+        children:
+          type: array
+          items: { $ref: "#/components/schemas/Span" }
+
+    EvalCaseResult:
+      type: object
+      properties:
+        query: { type: string }
+        recall@1: { type: number, format: float }
+        recall@3: { type: number, format: float }
+        recall@5: { type: number, format: float }
+        mrr@10: { type: number, format: float }
+        ndcg@5: { type: number, format: float }
+        groundedness: { type: number, format: float }
+        latency_ms: { type: number, format: float }
+        route: { type: string }
+        top_chunk: { type: string }
+        passed: { type: boolean }
+
+    EvalReport:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum: [offline, configured]
+          description: offline = 强制零依赖后端；configured = 按服务端真实配置
+        backends:
+          type: object
+          properties:
+            embedder: { type: string }
+            llm: { type: string }
+            reranker: { type: string }
+        metrics:
+          type: object
+          additionalProperties: { type: number, format: float }
+          description: recall@1/3/5, mrr@10, ndcg@5, groundedness, latency_p50_ms, latency_p95_ms, cases
+        thresholds:
+          type: object
+          additionalProperties: { type: number, format: float }
+        passed: { type: boolean }
+        failures:
+          type: array
+          items: { type: string }
+        cases:
+          type: array
+          items: { $ref: "#/components/schemas/EvalCaseResult" }

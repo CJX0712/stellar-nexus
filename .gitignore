@@ -1,0 +1,47 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# --- 前端测试依赖（控制台本体是 web/index.html，零构建） ---
+node_modules/
+# package-lock.json 要提交：jsdom 只靠它才能装出同一棵树
+
+# --- 运行时数据：知识库、向量库、日志 ---
+*.db
+*.db-journal
+*.db-wal
+*.sqlite
+*.sqlite3
+data/*.db
+data/*.log
+data/.pytest-tmp/
+data/e2e-report.txt
+logs/
+
+# --- 模型权重：体积大，不入仓库；README / DEPLOYMENT 给一键下载命令 ---
+models/
+*.onnx
+*.safetensors
+*.bin
+*.gguf
+
+# --- 开发期临时文件（诊断输出一律落盘成 txt，不进仓库） ---
+*.txt
+probe*.py
+wheelcheck*.py
+netprobe.py
+
+# --- 编辑器 / 系统 ---
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
