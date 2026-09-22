@@ -5,7 +5,10 @@ description = "星枢 StellarNexus - 可自证的模块化复合智能系统（�
 authors = [{ name = "晨星" }]
 maintainers = [{ name = "晨星" }]
 readme = "README.md"
-requires-python = ">=3.11,<3.14"
+# 下限是 3.12 而不是 3.11：锁定的 numpy 2.5.3 自身要求 >=3.12。
+# 这是 CI 在干净的 3.11 runner 上装依赖时报出来的 —— 声明支持的版本
+# 必须与锁定依赖实际能装的版本一致，否则 README 里的承诺就是假的。
+requires-python = ">=3.12,<3.14"
 license = { text = "Apache-2.0" }
 keywords = ["ai", "rag", "agent", "retrieval", "rerank", "groundedness", "llm"]
 classifiers = [
@@ -55,14 +58,14 @@ filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py311"
+target-version = "py312"
 extend-exclude = [".venv", "node_modules", "models", "data"]
 
 [tool.ruff.lint]
 # 只挑「真能抓出问题」的规则集，不追求规则数量。
 #   E/F  语法与未使用（PyFlakes 基本盘）
 #   I    导入顺序，配合 scripts/check_imports.py
-#   UP   使用现代语法（我们声明 >=3.11）
+#   UP   使用现代语法（我们声明 >=3.12）
 #   B    常见逻辑陷阱
 #   RUF  Ruff 自有规则（含无用 noqa、__all__ 未排序）
 select = ["E", "F", "I", "UP", "B", "RUF"]

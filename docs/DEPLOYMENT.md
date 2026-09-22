@@ -11,7 +11,7 @@
 | 项 | 最低 | 推荐 | 说明 |
 |---|---|---|---|
 | 操作系统 | Windows 10 / Ubuntu 20.04 | Windows 11 / Ubuntu 22.04 | 双平台均有两套轮子 |
-| Python | 3.11 | 3.13 | **不需要** MSVC / cmake / gcc |
+| Python | 3.12 | 3.13 | **不需要** MSVC / cmake / gcc |
 | CPU | 4 核 | 8 核以上 | 生成阶段是纯 CPU 瓶颈 |
 | 内存 | 4 GB | 16 GB | 7B 模型量化后约需 6 GB |
 | 磁盘 | 1 GB | 5 GB | 含模型与向量库 |

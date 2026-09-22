@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python: ["3.11", "3.13"]
+        python: ["3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
 
@@ -44,7 +44,7 @@ jobs:
 
       - name: 依赖轮子可用性（确认没有一句「需要编译器」）
         run: |
-          python scripts/check_wheels.py --platform linux --python cp311
+          python scripts/check_wheels.py --platform linux --python cp312
           python scripts/check_wheels.py --platform linux --python cp313
 
       - name: 静态检查
