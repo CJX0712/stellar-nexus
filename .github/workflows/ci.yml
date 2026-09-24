@@ -85,6 +85,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
+          cache: npm
           node-version: "22"
 
       - name: 安装测试依赖（控制台本体零构建，这里只为 jsdom）
@@ -116,6 +117,7 @@ jobs:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
+          cache: pip
           python-version: "3.13"
 
       - name: 按 requirements.lock 复现环境
