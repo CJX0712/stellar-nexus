@@ -22,12 +22,12 @@ dependencies = [
     "faiss-cpu==1.15.1",
     "onnxruntime==1.30.0",
     "tokenizers==0.23.2",
-    "fastapi==0.141.1",
-    "uvicorn==0.53.0",
+    "fastapi==0.142.2",
+    "uvicorn==0.54.0",
     "pydantic==2.13.5",
     "httpx==0.28.1",
     "orjson==3.12.0",
-    "sse-starlette==3.4.11",
+    "sse-starlette==3.5.0",
     "python-multipart==0.0.32",
     "rich==15.0.0",
 ]
@@ -35,8 +35,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "pytest==9.1.1",
-    "pytest-cov==7.0.0",
-    "ruff==0.16.8",
+    "pytest-cov==7.1.0",
+    "ruff==0.16.10",
 ]
 
 [project.scripts]
